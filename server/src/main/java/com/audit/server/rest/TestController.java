@@ -42,4 +42,10 @@ public class TestController {
         String response = "crawler works";
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @GetMapping(path = "/ibm", produces = "application/json")
+    public ResponseEntity<String> testIbm() throws Exception {
+        String response = aiService.runIbmScan("https://en.wikipedia.org/wiki/STAYC");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 }

@@ -17,8 +17,10 @@ import javax.imageio.*;
 import javax.imageio.stream.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.List;
 import java.util.function.Function;
@@ -55,12 +57,12 @@ public class AiService {
             "If there are no violations, the response should be: \n" +
             "{\n" +
             "    \"overall_violation\": \"PASSED\",\n" +
-            "    \"violated_elements_and_reasons\": [}\n" +
+            "    \"violated_elements_and_reasons\": []\n" +
             "}" +
             "\n If no element is provided you can return (elements can not be forgotten): " +
             "{\n" +
             "    \"overall_violation\": \"NA\",\n" +
-            "    \"violated_elements_and_reasons\": [}\n" +
+            "    \"violated_elements_and_reasons\": []\n" +
             "}\n";
 
     public AiService(SuccessCriteriaRepository criteriaRepo, AuditRepository auditRepo, JSoupService jSoupService) {
@@ -94,6 +96,38 @@ public class AiService {
         );
     }
 
+    public String runIbmScan(String url) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder(
+                "achecker.cmd",
+                url,
+                "--output",
+                "json",
+                "--file",
+                "report.json"
+        );
+
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+
+        BufferedReader reader =
+                new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        StringBuilder output = new StringBuilder();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+            output.append(line);
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("IBM scan failed");
+        }
+
+        return output.toString();
+    }
+
     /**
      * Compresses and resizes an image to keep base64-encoded size well under
      * Groq's 4 MB request limit. Scales down to a max dimension of 1280 px
@@ -102,9 +136,8 @@ public class AiService {
     private byte[] compressImage(byte[] imageBytes) {
         try {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
-            if (img == null) return imageBytes; // unrecognised format, pass through
+            if (img == null) return imageBytes;
 
-            // Scale down if either dimension exceeds 1280 px
             int maxDim = 1280;
             if (img.getWidth() > maxDim || img.getHeight() > maxDim) {
                 double scale = Math.min((double) maxDim / img.getWidth(),
@@ -131,7 +164,6 @@ public class AiService {
             writer.dispose();
             return out.toByteArray();
         } catch (Exception e) {
-            // If anything goes wrong just return the original bytes
             return imageBytes;
         }
     }
