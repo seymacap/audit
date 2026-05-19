@@ -1,6 +1,7 @@
 package com.audit.server.rest;
 
 import com.audit.server.service.AiService;
+import com.audit.server.service.IBMService;
 import com.audit.server.service.JSoupService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.ai.chat.client.ChatClient;
@@ -27,8 +28,11 @@ public class TestController {
 
     private final AiService aiService;
 
-    public TestController(AiService aiService) {
+    private final IBMService ibmService;
+
+    public TestController(AiService aiService, IBMService ibmService) {
         this.aiService = aiService;
+        this.ibmService = ibmService;
     }
 
     @GetMapping("/ai/generate")
@@ -45,7 +49,7 @@ public class TestController {
 
     @GetMapping(path = "/ibm", produces = "application/json")
     public ResponseEntity<String> testIbm() throws Exception {
-        String response = aiService.runIbmScan("https://en.wikipedia.org/wiki/STAYC");
+        String response = ibmService.runIbmScan("https://en.wikipedia.org/wiki/STAYC");
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

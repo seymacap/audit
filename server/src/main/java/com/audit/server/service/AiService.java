@@ -17,10 +17,8 @@ import javax.imageio.*;
 import javax.imageio.stream.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStreamReader;
+import java.io.*;
+
 import java.util.*;
 import java.util.List;
 import java.util.function.Function;
@@ -96,41 +94,9 @@ public class AiService {
         );
     }
 
-    public String runIbmScan(String url) throws Exception {
-        ProcessBuilder builder = new ProcessBuilder(
-                "achecker.cmd",
-                url,
-                "--output",
-                "json",
-                "--file",
-                "report.json"
-        );
-
-        builder.redirectErrorStream(true);
-        Process process = builder.start();
-
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-        StringBuilder output = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            System.out.println(line);
-            output.append(line);
-        }
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new RuntimeException("IBM scan failed");
-        }
-
-        return output.toString();
-    }
-
     /**
      * Compresses and resizes an image to keep base64-encoded size well under
-     * Groq's 4 MB request limit. Scales down to a max dimension of 1280 px
+     * request limit. Scales down to a max dimension of 1280 px
      * and re-encodes as JPEG at 75% quality.
      */
     private byte[] compressImage(byte[] imageBytes) {
@@ -482,25 +448,5 @@ public class AiService {
                         formatMessage +
                         " Remember no backticks and only respond with the given format.",
                 images);
-    }
-
-    private String detectMimeType(byte[] bytes) {
-        if (bytes.length >= 3
-                && bytes[0] == (byte) 0xFF
-                && bytes[1] == (byte) 0xD8
-                && bytes[2] == (byte) 0xFF) {
-            return "image/jpeg";
-        } else if (bytes.length >= 4
-                && bytes[0] == (byte) 0x89
-                && bytes[1] == 0x50
-                && bytes[2] == 0x4E
-                && bytes[3] == 0x47) {
-            return "image/png";
-        } else if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F') {
-            return "image/gif";
-        } else if (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F') {
-            return "image/webp";
-        }
-        return "image/jpeg";
     }
 }
