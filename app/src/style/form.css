@@ -149,3 +149,15 @@ i {
     content:" *";
     color: red;
 }
+
+.ai-box {
+    margin: 10px;
+}
+
+.box-header {
+    font-weight: bold;
+}
+
+.box-item {
+    padding-bottom: 15px;
+}

@@ -53,16 +53,22 @@ public class AiService {
             "            \"comment\": \"\" (You can leave this empty)" +
             "        }\n" +
             "    ]\n" +
+            "    \"thought_process\": \"Briefly describe your thought process \",\n" +
+            "    \"ibm\": \"If you've been provided anything flagged by IBM's Accessibility Checker, put them here." +
             "}" +
             "If there are no violations, the response should be: \n" +
             "{\n" +
             "    \"overall_violation\": \"PASSED\",\n" +
             "    \"violated_elements_and_reasons\": []\n" +
+            "    \"thought_process\": \"Briefly describe your thought process \",\n" +
+            "    \"ibm\": \"If you've been provided anything flagged by IBM's Accessibility Checker, put them here." +
             "}" +
             "\n If no element is provided you can return (elements can not be forgotten): " +
             "{\n" +
             "    \"overall_violation\": \"NA\",\n" +
             "    \"violated_elements_and_reasons\": []\n" +
+            "    \"thought_process\": \"Briefly describe your thought process \",\n" +
+            "    \"ibm\": \"If you've been provided anything flagged by IBM's Accessibility Checker, put them here." +
             "}\n";
 
     public AiService(SuccessCriteriaRepository criteriaRepo, AuditRepository auditRepo, JSoupService jSoupService, IBMService ibmService) {
@@ -203,9 +209,6 @@ public class AiService {
         String rawJson = ibmService.getOrRunScan(auditId, url);
         String ibmIssues = ibmService.getIssuesPerCriteria(rawJson, criteriaId);
 
-        System.out.println(rawJson);
-        System.out.println(ibmIssues);
-
         BiFunction<String, String, String> handler = criteriaHandlers.get(criteria.getRefId());
         if (handler == null)
             throw new UnsupportedOperationException("No handler for criteria: " + criteria.getRefId());
@@ -239,9 +242,6 @@ public class AiService {
         String ibmSection = ibmIssues.isBlank() ? "" :
                 "\n\nIBM Accessibility Checker also flagged these issues for this criterion, please take these issues into " +
                         "accountability and try to check if they are true:\n" + ibmIssues;
-
-        System.out.println(ibmIssues );
-        System.out.println("hello");
 
         return callTextApi("openai/gpt-oss-120b",
                 "You are an Accessibility Expert (WCAG Specialist) responsible for detecting WCAG 2.2 violations on websites." +
@@ -451,6 +451,8 @@ public class AiService {
         String ibmSection = ibmIssues.isBlank() ? "" :
                 "\n\nIBM Accessibility Checker also flagged these issues for this criterion, please take these issues into " +
                         "accountability and try to check if they are true:\n" + ibmIssues;
+
+        System.out.println(ibmIssues);
 
         return callImageApi(
                 "You are an Accessibility Expert (WCAG Specialist) responsible for detecting WCAG 2.2 violations on websites." +

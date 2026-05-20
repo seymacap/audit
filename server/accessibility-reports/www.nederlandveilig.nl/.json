@@ -10,7 +10,7 @@
                 "dom": "/html[1]/head[1]/link[2]",
                 "aria": "/document[1]"
             },
-            "ruleTime": 2,
+            "ruleTime": 1,
             "reasonId": "Potential_1",
             "message": "Verify color is not used as the only visual means of conveying information",
             "messageArgs": [],
@@ -66,7 +66,7 @@
                 "dom": "/html[1]/body[1]/div[2]/header[1]/div[1]/a[1]",
                 "aria": "/document[1]/banner[1]/link[1]"
             },
-            "ruleTime": 4,
+            "ruleTime": 2,
             "reasonId": "potential_visible",
             "message": "Confirm the element should be tabbable and if so, it becomes visible when it has keyboard focus",
             "messageArgs": [],
@@ -155,7 +155,7 @@
                 "dom": "/html[1]/body[1]/div[2]/header[1]/div[6]/div[1]/div[2]/p[1]",
                 "aria": "/document[1]/banner[1]/paragraph[1]"
             },
-            "ruleTime": 1,
+            "ruleTime": 0,
             "reasonId": "potential_heading",
             "message": "Confirm this text 'Informatie tijdens een noodsituatie' is used as a heading and if so, modify to use a heading element or role",
             "messageArgs": [
@@ -206,8 +206,8 @@
             "help": "https://able.ibm.com/rules/archives/2026.05.19/doc/en-US/text_block_heading.html#%7B%22message%22%3A%22Confirm%20this%20text%20'Nederland%20veilig'%20is%20used%20as%20a%20heading%20and%20if%20so%2C%20modify%20to%20use%20a%20heading%20element%20or%20role%22%2C%22snippet%22%3A%22%3Cdiv%3E%22%2C%22value%22%3A%5B%22VIOLATION%22%2C%22POTENTIAL%22%5D%2C%22reasonId%22%3A%22potential_heading%22%2C%22ruleId%22%3A%22text_block_heading%22%2C%22msgArgs%22%3A%5B%22Nederland%20veilig%22%5D%7D"
         }
     ],
-    "numExecuted": 556,
-    "ruleTime": 75,
+    "numExecuted": 558,
+    "ruleTime": 43,
     "nls": {
         "style_color_misuse": {
             "0": "Combine color and descriptive markup to convey information",
@@ -241,9 +241,9 @@
             "recommendation": 1,
             "potentialrecommendation": 0,
             "manual": 1,
-            "pass": 549
+            "pass": 551
         },
-        "scanTime": 186,
+        "scanTime": 112,
         "ruleArchive": "Latest Deployment (latest)",
         "policies": [
             "IBM_Accessibility"
@@ -255,10 +255,10 @@
             "potentialrecommendation",
             "manual"
         ],
-        "startScan": 1779274413020,
+        "startScan": 1779284740616,
         "URL": "https://www.nederlandveilig.nl/"
     },
-    "scanID": "033083af-2765-4c1b-b759-e8ffa3822dd5",
+    "scanID": "42ae6880-dd63-4b4d-9df8-e2e9a29b53cf",
     "toolID": "accessibility-checker-v4.0.17",
     "label": "www.nederlandveilig.nl/"
 }
