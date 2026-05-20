@@ -10,20 +10,79 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class IBMService {
+
+    private final ConcurrentHashMap<String, String> scanCache = new ConcurrentHashMap<>();
+
+    public String getOrRunScan(String auditId, String url) throws Exception {
+        return scanCache.computeIfAbsent(auditId, id -> {
+            try {
+                return runIbmScan(url);
+            } catch (Exception e) {
+                throw new RuntimeException("IBM scan failed for url: " + url, e);
+            }
+        });
+    }
+
+    private static final Map<String, List<String>> WCAG_TO_RULE_IDS = Map.ofEntries(
+            Map.entry("1.1.1", List.of("img_alt_valid", "img_alt_background")),
+            Map.entry("1.3.2", List.of("text_block_heading")),
+            Map.entry("1.3.4", List.of()),
+            Map.entry("1.3.5", List.of("input_label_visible", "label_content_exists")),
+            Map.entry("1.4.1", List.of("style_color_misuse")),
+            Map.entry("1.4.3", List.of("text_contrast_sufficient")),
+            Map.entry("2.4.4", List.of("a_text_purpose")),
+            Map.entry("2.4.6", List.of("label_content_exists", "text_block_heading")),
+            Map.entry("2.5.3", List.of("aria_accessiblename_exists")),
+            Map.entry("3.3.2", List.of("input_label_visible", "input_checkboxes_grouped", "label_content_exists")),
+            Map.entry("4.1.2", List.of("aria_role_valid", "aria_attribute_valid", "aria_accessiblename_exists",
+                    "element_id_unique", "element_tabbable_role_valid"))
+
+            //TODO add more values from ibm website
+    );
+
+    public String getIssuesPerCriteria(String rawJson, String criteriaId) throws Exception {
+        List<String> ruleIds = WCAG_TO_RULE_IDS.getOrDefault(criteriaId, List.of());
+        if (ruleIds.isEmpty()) return "";
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode root = mapper.readTree(rawJson);
+        JsonNode results = root.path("results").isMissingNode()
+                ? root.path("data").path("results")
+                : root.path("results");
+
+        StringBuilder sb = new StringBuilder();
+
+        for (JsonNode issue : results) {
+            String ruleId = issue.path("ruleId").asText("");
+            if (ruleIds.contains(ruleId)) {
+                String level   = issue.path("level").asText("");
+                String message = issue.path("message").asText("");
+                String snippet = issue.path("snippet").asText("").trim();
+
+                sb.append("- [").append(level.toUpperCase()).append("] ")
+                        .append(message);
+                if (!snippet.isBlank()) {
+                    sb.append(" | Element: ").append(snippet);
+                }
+                sb.append("\n");
+            }
+        }
+
+        return sb.toString();
+    }
 
     public String runIbmScan(String url) throws Exception {
         Path outputDir = Path.of("accessibility-reports").toAbsolutePath();
         Files.createDirectories(outputDir);
 
-        try (var stream = Files.list(outputDir)) {
-            stream.filter(p -> p.toString().endsWith(".json"))
+        try (var stream = Files.walk(outputDir)) {
+            stream.sorted(Comparator.reverseOrder())
+                    .filter(p -> !p.equals(outputDir))
                     .forEach(p -> p.toFile().delete());
         }
 
@@ -52,68 +111,20 @@ public class IBMService {
         stdoutThread.join();
         process.waitFor();
 
-        try (var stream = Files.list(outputDir)) {
+        try (var stream = Files.walk(outputDir)) {
             return stream
                     .filter(p -> p.toString().endsWith(".json"))
-                    .findFirst()
+                    .filter(p -> !p.getFileName().toString().startsWith("summary_"))
+                    .max(Comparator.comparingLong(p -> p.toFile().length()))
                     .map(p -> {
-                        try { return Files.readString(p); }
+                        try {
+                            System.out.println("Reading report from: " + p);
+                            return Files.readString(p);
+                        }
                         catch (IOException e) { throw new RuntimeException(e); }
                     })
                     .orElseThrow(() -> new RuntimeException("No JSON report generated for: " + url));
         }
-    }
-
-    // Extracts a compact summary from the raw JSON for AI analysis
-    public String buildPrompt(String rawJson) {
-        ObjectMapper mapper = new ObjectMapper();
-        StringBuilder summary = new StringBuilder();
-
-        try {
-            JsonNode root = mapper.readTree(rawJson);
-
-            // achecker wraps results in a "results" array
-            JsonNode results = root.path("results");
-            if (results.isMissingNode()) {
-                results = root.path("data").path("results");
-            }
-
-            Map<String, List<String>> grouped = new LinkedHashMap<>();
-            grouped.put("violation", new ArrayList<>());
-            grouped.put("potentialviolation", new ArrayList<>());
-            grouped.put("recommendation", new ArrayList<>());
-
-            for (JsonNode issue : results) {
-                String level = issue.path("level").asText("").toLowerCase();
-                String message = issue.path("message").asText("");
-                String snippet = issue.path("snippet").asText("");
-
-                if (grouped.containsKey(level)) {
-                    String entry = "- " + message +
-                            (snippet.isBlank() ? "" : " [" + snippet.trim() + "]");
-                    grouped.get(level).add(entry);
-                }
-            }
-
-            int violations = grouped.get("violation").size();
-            int potential = grouped.get("potentialviolation").size();
-            int recommendations = grouped.get("recommendation").size();
-
-            summary.append("Accessibility scan results:\n");
-            summary.append("Violations: ").append(violations)
-                    .append(", Potential violations: ").append(potential)
-                    .append(", Recommendations: ").append(recommendations).append("\n\n");
-
-            // Only include top 10 per category
-            appendSection(summary, "Violations", grouped.get("violation"), 10);
-            appendSection(summary, "Potential Violations", grouped.get("potentialviolation"), 10);
-            appendSection(summary, "Recommendations", grouped.get("recommendation"), 10);
-
-        } catch (Exception e) {
-            return "Failed to parse accessibility report: " + e.getMessage();
-        }
-
-        return summary.toString();
     }
 
     private void appendSection(StringBuilder sb, String title, List<String> items, int max) {

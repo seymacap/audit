@@ -29,12 +29,12 @@ public class SuccessCriteriaController {
     }
 
     @GetMapping(path = "/ai_put", produces = "application/json")
-    public String getAiRecommendation(@RequestParam String criteriaId, @RequestParam String auditId) {
+    public String getAiRecommendation(@RequestParam String criteriaId, @RequestParam String auditId) throws Exception {
         return aiService.generateResponse(criteriaId, auditId);
     }
 
     @PostMapping(path = "/ai_picture", produces = "application/json")
-    public String getAiRecommendationWithPicture(@RequestParam String criteriaId, @RequestParam String auditId, @RequestParam("image") List<MultipartFile> images ) throws IOException {
+    public String getAiRecommendationWithPicture(@RequestParam String criteriaId, @RequestParam String auditId, @RequestParam("image") List<MultipartFile> images ) throws Exception {
         List<byte[]> imageBytes = new ArrayList<>();
         for (MultipartFile image : images){
             imageBytes.add(image.getBytes());

@@ -1,0 +1,48 @@
+{
+    "counts": {
+        "ignored": 0,
+        "violation": 0,
+        "recommendation": 1,
+        "pass": 549,
+        "potentialviolation": 5,
+        "potentialrecommendation": 0,
+        "manual": 1,
+        "elements": 6,
+        "elementsViolation": 0,
+        "elementsViolationReview": 5
+    },
+    "startReport": 1779274413020,
+    "endReport": 1779274413956,
+    "toolID": "accessibility-checker-v4.0.17",
+    "policies": [
+        "IBM_Accessibility"
+    ],
+    "reportLevels": [
+        "violation",
+        "potentialviolation",
+        "recommendation",
+        "potentialrecommendation",
+        "manual"
+    ],
+    "failLevels": [
+        "violation"
+    ],
+    "scanID": "033083af-2765-4c1b-b759-e8ffa3822dd5",
+    "pageScanSummary": [
+        {
+            "label": "www.nederlandveilig.nl/",
+            "counts": {
+                "ignored": 0,
+                "elements": 6,
+                "elementsViolation": 0,
+                "elementsViolationReview": 5,
+                "violation": 0,
+                "potentialviolation": 5,
+                "recommendation": 1,
+                "potentialrecommendation": 0,
+                "manual": 1,
+                "pass": 549
+            }
+        }
+    ]
+}
