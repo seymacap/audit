@@ -108,6 +108,8 @@ public class TestController {
         sb.append("working dir: ").append(System.getProperty("user.dir")).append("\n");
         sb.append("working dir writable: ").append(new File(System.getProperty("user.dir")).canWrite()).append("\n");
         sb.append("aceconfig.js exists: ").append(Files.exists(Path.of(System.getProperty("user.dir") + "/aceconfig.js"))).append("\n");
+        sb.append("chromium exists: ").append(Files.exists(Path.of("/usr/bin/chromium"))).append("\n");
+        sb.append("chromium-browser exists: ").append(Files.exists(Path.of("/usr/bin/chromium-browser"))).append("\n");
 
         return sb.toString();
     }
