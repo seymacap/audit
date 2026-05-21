@@ -165,7 +165,7 @@ public class IBMService {
                 : new ProcessBuilder("/mise/shims/npm", "root", "-g");
 
         pb.redirectErrorStream(true);
-        
+
         pb.environment().put("PATH", "/mise/shims:/usr/local/bin:/usr/bin:/bin");
         Process p = pb.start();
         String globalRoot = new String(p.getInputStream().readAllBytes()).trim();

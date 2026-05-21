@@ -55,17 +55,16 @@ public class TestController {
 
         // Print PATH
         sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
-
-        // Try which node
+        
         try {
-            ProcessBuilder pb = new ProcessBuilder("which", "node");
+            ProcessBuilder pb = new ProcessBuilder("find", "/mise/installs", "-name", "node", "-type", "f");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             String result = new String(p.getInputStream().readAllBytes()).trim();
             p.waitFor();
-            sb.append("which node: ").append(result).append("\n");
+            sb.append("find node binaries: ").append(result).append("\n");
         } catch (Exception e) {
-            sb.append("which node failed: ").append(e.getMessage()).append("\n");
+            sb.append("find failed: ").append(e.getMessage()).append("\n");
         }
 
         // Try common node locations
