@@ -57,14 +57,16 @@ public class TestController {
         sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
 
         try {
-            ProcessBuilder pb = new ProcessBuilder("find", "/mise/installs", "-name", "node", "-type", "f");
+            ProcessBuilder pb = new ProcessBuilder("find",
+                    "/mise/installs/node/22.22.2/lib/node_modules/accessibility-checker",
+                    "-name", "*.js", "-maxdepth", "3");
             pb.redirectErrorStream(true);
             Process p = pb.start();
             String result = new String(p.getInputStream().readAllBytes()).trim();
             p.waitFor();
-            sb.append("find node binaries: ").append(result).append("\n");
+            sb.append("achecker files:\n").append(result).append("\n");
         } catch (Exception e) {
-            sb.append("find failed: ").append(e.getMessage()).append("\n");
+            sb.append("find achecker failed: ").append(e.getMessage()).append("\n");
         }
 
         // Try common node locations
