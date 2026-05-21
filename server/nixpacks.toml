@@ -1,5 +1,2 @@
-[phases.setup]
-nixPkgs = ["nodejs", "nodePackages.npm"]
-
 [phases.install]
 cmds = ["npm install -g accessibility-checker"]

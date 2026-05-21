@@ -137,6 +137,19 @@ public class IBMService {
     }
 
     private String findNodeExecutable() throws Exception {
+        // Check mise shims first (Railway)
+        String[] knownPaths = {
+                "/mise/shims/node",
+                "/mise/installs/node/22/bin/node",
+                "/usr/local/bin/node",
+                "/usr/bin/node"
+        };
+
+        for (String path : knownPaths) {
+            if (Files.exists(Path.of(path))) return path;
+        }
+
+        // Fall back to which/where
         ProcessBuilder pb = IS_WINDOWS
                 ? new ProcessBuilder("cmd", "/c", "where", "node")
                 : new ProcessBuilder("which", "node");
@@ -145,8 +158,10 @@ public class IBMService {
         Process p = pb.start();
         String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
         p.waitFor();
-        if (path.isEmpty()) throw new RuntimeException("Could not find node executable");
-        return path;
+
+        if (!path.isEmpty()) return path;
+
+        throw new RuntimeException("Could not find node executable. PATH: " + System.getenv("PATH"));
     }
 
     private String findAcheckerScript() throws Exception {
