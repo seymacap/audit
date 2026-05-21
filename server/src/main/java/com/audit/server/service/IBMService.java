@@ -140,14 +140,25 @@ public class IBMService {
     }
 
     public String findNodeExecutable() throws Exception {
+        String[] knownPaths = {
+                "/usr/bin/node",           // Dockerfile apt-get install nodejs
+                "/usr/local/bin/node",
+                "/mise/installs/node/22.22.2/bin/node"
+        };
+
+        for (String path : knownPaths) {
+            if (Files.exists(Path.of(path))) return path;
+        }
+
         Path miseInstalls = Path.of("/mise/installs/node");
         if (Files.exists(miseInstalls)) {
-            return Files.list(miseInstalls)
+            Optional<Path> latest = Files.list(miseInstalls)
                     .filter(Files::isDirectory)
-                    .max(Comparator.naturalOrder())
-                    .map(p -> p.resolve("bin/node").toString())
-                    .filter(p -> Files.exists(Path.of(p)))
-                    .orElseThrow(() -> new RuntimeException("No node binary under /mise/installs/node"));
+                    .max(Comparator.naturalOrder());
+            if (latest.isPresent()) {
+                Path nodeBin = latest.get().resolve("bin/node");
+                if (Files.exists(nodeBin)) return nodeBin.toString();
+            }
         }
 
         if (IS_WINDOWS) {
@@ -163,8 +174,9 @@ public class IBMService {
     }
 
     public String findAcheckerScript() throws Exception {
-        String appDir = System.getProperty("user.dir");
-        String localBase = appDir + "/node_modules/accessibility-checker/";
+        String sep = File.separator;
+
+        String localBase = System.getProperty("user.dir") + sep + "node_modules" + sep + "accessibility-checker" + sep;
 
         String miseBase = null;
         Path miseInstalls = Path.of("/mise/installs/node");
@@ -173,21 +185,28 @@ public class IBMService {
                     .filter(Files::isDirectory)
                     .max(Comparator.naturalOrder());
             if (latest.isPresent()) {
-                miseBase = latest.get() + "/lib/node_modules/accessibility-checker/";
+                miseBase = latest.get() + sep + "lib" + sep + "node_modules" + sep + "accessibility-checker" + sep;
             }
         }
 
-        String sep = File.separator;
-        List<String> candidates = new ArrayList<>();
-
-        for (String suffix : List.of(
+        String[] suffixes = {
                 "src" + sep + "lib" + sep + "ace.js",
                 "src" + sep + "lib" + sep + "index.js",
                 "bin" + sep + "achecker.js",
                 "lib" + sep + "ace.js",
-                "index.js")) {
-            candidates.add(localBase + suffix);
-            if (miseBase != null) candidates.add(miseBase + suffix);
+                "index.js"
+        };
+
+        for (String suffix : suffixes) {
+            Path candidate = Path.of(localBase + suffix);
+            if (Files.exists(candidate)) return candidate.toString();
+        }
+
+        if (miseBase != null) {
+            for (String suffix : suffixes) {
+                Path candidate = Path.of(miseBase + suffix);
+                if (Files.exists(candidate)) return candidate.toString();
+            }
         }
 
         if (IS_WINDOWS) {
@@ -197,16 +216,12 @@ public class IBMService {
             String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
             p.waitFor();
             String winBase = globalRoot + "\\accessibility-checker\\";
-            for (String suffix : List.of("src\\lib\\ace.js", "src\\lib\\index.js",
-                    "bin\\achecker.js", "lib\\ace.js", "index.js")) {
-                candidates.add(winBase + suffix);
+            for (String suffix : new String[]{"src\\lib\\ace.js", "src\\lib\\index.js",
+                    "bin\\achecker.js", "lib\\ace.js", "index.js"}) {
+                if (Files.exists(Path.of(winBase + suffix))) return winBase + suffix;
             }
         }
 
-        for (String candidate : candidates) {
-            if (Files.exists(Path.of(candidate))) return candidate;
-        }
-
-        throw new RuntimeException("Cannot find achecker script. Tried: " + candidates);
+        throw new RuntimeException("Cannot find achecker script. localBase=" + localBase);
     }
 }
