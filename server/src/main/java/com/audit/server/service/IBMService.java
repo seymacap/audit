@@ -45,6 +45,17 @@ public class IBMService {
             //TODO add more values from ibm website
     );
 
+    private static final boolean IS_WINDOWS = System.getProperty("os.name")
+            .toLowerCase().contains("win");
+
+    private ProcessBuilder buildNodeProcess(String nodeExecutable, String acheckerScript, String url) {
+        if (IS_WINDOWS) {
+            return new ProcessBuilder("cmd", "/c", nodeExecutable, acheckerScript, url);
+        } else {
+            return new ProcessBuilder(nodeExecutable, acheckerScript, url);
+        }
+    }
+
     public String getIssuesPerCriteria(String rawJson, String criteriaId) throws Exception {
         List<String> ruleIds = WCAG_TO_RULE_IDS.getOrDefault(criteriaId, List.of());
         if (ruleIds.isEmpty()) return "";
@@ -89,9 +100,7 @@ public class IBMService {
         String nodeExecutable = findNodeExecutable();
         String acheckerScript = findAcheckerScript();
 
-        ProcessBuilder builder = new ProcessBuilder(
-                "cmd", "/c", nodeExecutable, acheckerScript, url
-        );
+        ProcessBuilder builder = buildNodeProcess(nodeExecutable, acheckerScript, url);
 
         builder.directory(new File(System.getProperty("user.dir")));
         builder.redirectErrorStream(false);
@@ -127,18 +136,11 @@ public class IBMService {
         }
     }
 
-    private void appendSection(StringBuilder sb, String title, List<String> items, int max) {
-        if (items.isEmpty()) return;
-        sb.append(title).append(":\n");
-        items.stream().limit(max).forEach(item -> sb.append(item).append("\n"));
-        if (items.size() > max) {
-            sb.append("  ...and ").append(items.size() - max).append(" more.\n");
-        }
-        sb.append("\n");
-    }
-
     private String findNodeExecutable() throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "where", "node");
+        ProcessBuilder pb = IS_WINDOWS
+                ? new ProcessBuilder("cmd", "/c", "where", "node")
+                : new ProcessBuilder("which", "node");
+
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
@@ -148,18 +150,23 @@ public class IBMService {
     }
 
     private String findAcheckerScript() throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
+        ProcessBuilder pb = IS_WINDOWS
+                ? new ProcessBuilder("cmd", "/c", "npm", "root", "-g")
+                : new ProcessBuilder("npm", "root", "-g");
+
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
         p.waitFor();
 
-        String base = globalRoot + "\\accessibility-checker\\";
+        String sep = File.separator;
+        String base = globalRoot + sep + "accessibility-checker" + sep;
+
         String[] candidates = {
-                base + "src\\lib\\ace.js",
-                base + "src\\lib\\index.js",
-                base + "bin\\achecker.js",
-                base + "lib\\ace.js",
+                base + "src" + sep + "lib" + sep + "ace.js",
+                base + "src" + sep + "lib" + sep + "index.js",
+                base + "bin" + sep + "achecker.js",
+                base + "lib" + sep + "ace.js",
                 base + "index.js"
         };
 
