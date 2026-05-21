@@ -163,54 +163,50 @@ public class IBMService {
     }
 
     private String findAcheckerScript() throws Exception {
-        String globalRoot;
+        String appDir = System.getProperty("user.dir");
+        String localBase = appDir + "/node_modules/accessibility-checker/";
 
+        String miseBase = null;
         Path miseInstalls = Path.of("/mise/installs/node");
         if (Files.exists(miseInstalls)) {
-            String npmPath = Files.list(miseInstalls)
+            Optional<Path> latest = Files.list(miseInstalls)
                     .filter(Files::isDirectory)
-                    .max(Comparator.naturalOrder())
-                    .map(p -> p.resolve("bin/npm").toString())
-                    .filter(p -> Files.exists(Path.of(p)))
-                    .orElseThrow(() -> new RuntimeException("No npm binary under /mise/installs/node"));
-
-            String nodeBinDir = Path.of(npmPath).getParent().toString();
-
-            ProcessBuilder pb = new ProcessBuilder(npmPath, "root", "-g");
-            pb.environment().put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
-        } else if (IS_WINDOWS) {
-            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
-        } else {
-            ProcessBuilder pb = new ProcessBuilder("npm", "root", "-g");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
+                    .max(Comparator.naturalOrder());
+            if (latest.isPresent()) {
+                miseBase = latest.get() + "/lib/node_modules/accessibility-checker/";
+            }
         }
 
         String sep = File.separator;
-        String base = globalRoot + sep + "accessibility-checker" + sep;
+        List<String> candidates = new ArrayList<>();
 
-        String[] candidates = {
-                base + "src" + sep + "lib" + sep + "ace.js",
-                base + "src" + sep + "lib" + sep + "index.js",
-                base + "bin" + sep + "achecker.js",
-                base + "lib" + sep + "ace.js",
-                base + "index.js"
-        };
+        for (String suffix : List.of(
+                "src" + sep + "lib" + sep + "ace.js",
+                "src" + sep + "lib" + sep + "index.js",
+                "bin" + sep + "achecker.js",
+                "lib" + sep + "ace.js",
+                "index.js")) {
+            candidates.add(localBase + suffix);
+            if (miseBase != null) candidates.add(miseBase + suffix);
+        }
+
+        if (IS_WINDOWS) {
+            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
+            String winBase = globalRoot + "\\accessibility-checker\\";
+            for (String suffix : List.of("src\\lib\\ace.js", "src\\lib\\index.js",
+                    "bin\\achecker.js", "lib\\ace.js", "index.js")) {
+                candidates.add(winBase + suffix);
+            }
+        }
 
         for (String candidate : candidates) {
             if (Files.exists(Path.of(candidate))) return candidate;
         }
 
-        throw new RuntimeException("Cannot find achecker script under: " + base);
+        throw new RuntimeException("Cannot find achecker script. Tried: " + candidates);
     }
 }
