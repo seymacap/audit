@@ -139,7 +139,7 @@ public class IBMService {
         }
     }
 
-    private String findNodeExecutable() throws Exception {
+    public String findNodeExecutable() throws Exception {
         Path miseInstalls = Path.of("/mise/installs/node");
         if (Files.exists(miseInstalls)) {
             return Files.list(miseInstalls)
@@ -162,7 +162,7 @@ public class IBMService {
         throw new RuntimeException("Could not find node. PATH: " + System.getenv("PATH"));
     }
 
-    private String findAcheckerScript() throws Exception {
+    public String findAcheckerScript() throws Exception {
         String appDir = System.getProperty("user.dir");
         String localBase = appDir + "/node_modules/accessibility-checker/";
 

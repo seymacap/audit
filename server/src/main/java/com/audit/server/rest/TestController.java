@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -79,6 +80,33 @@ public class TestController {
         for (String path : commonPaths) {
             sb.append(path).append(" exists: ").append(Files.exists(Path.of(path))).append("\n");
         }
+        
+        try {
+            String nodeExecutable = ibmService.findNodeExecutable();
+            String acheckerScript = ibmService.findAcheckerScript();
+
+            ProcessBuilder pb = new ProcessBuilder(nodeExecutable, acheckerScript, "https://www.nederlandveilig.nl/");
+            pb.directory(new File(System.getProperty("user.dir")));
+            pb.redirectErrorStream(true);
+
+            String nodeBinDir = Path.of(nodeExecutable).getParent().toString();
+            pb.environment().put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
+            pb.environment().put("NODE_NO_WARNINGS", "1");
+
+            Process p = pb.start();
+            String output = new String(p.getInputStream().readAllBytes());
+            int exit = p.waitFor();
+
+            sb.append("achecker exit code: ").append(exit).append("\n");
+            sb.append("achecker output (first 2000 chars):\n")
+                    .append(output, 0, Math.min(2000, output.length())).append("\n");
+        } catch (Exception e) {
+            sb.append("achecker test failed: ").append(e.getMessage()).append("\n");
+        }
+
+        sb.append("working dir: ").append(System.getProperty("user.dir")).append("\n");
+        sb.append("working dir writable: ").append(new File(System.getProperty("user.dir")).canWrite()).append("\n");
+        sb.append("aceconfig.js exists: ").append(Files.exists(Path.of(System.getProperty("user.dir") + "/aceconfig.js"))).append("\n");
 
         return sb.toString();
     }
