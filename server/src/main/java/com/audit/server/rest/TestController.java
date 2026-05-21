@@ -80,7 +80,7 @@ public class TestController {
         for (String path : commonPaths) {
             sb.append(path).append(" exists: ").append(Files.exists(Path.of(path))).append("\n");
         }
-        
+
         try {
             String nodeExecutable = ibmService.findNodeExecutable();
             String acheckerScript = ibmService.findAcheckerScript();
@@ -104,6 +104,7 @@ public class TestController {
             sb.append("achecker test failed: ").append(e.getMessage()).append("\n");
         }
 
+        sb.append("puppeteer cache exists: ").append(Files.exists(Path.of("/root/.cache/puppeteer"))).append("\n");
         sb.append("working dir: ").append(System.getProperty("user.dir")).append("\n");
         sb.append("working dir writable: ").append(new File(System.getProperty("user.dir")).canWrite()).append("\n");
         sb.append("aceconfig.js exists: ").append(Files.exists(Path.of(System.getProperty("user.dir") + "/aceconfig.js"))).append("\n");
