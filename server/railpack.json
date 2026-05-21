@@ -1,0 +1,10 @@
+{
+  "packages": {
+    "node": "22"
+  },
+  "install": {
+    "cmds": [
+      "npm install -g accessibility-checker"
+    ]
+  }
+}
