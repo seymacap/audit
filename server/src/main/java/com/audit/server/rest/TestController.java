@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 @RestController
@@ -45,5 +47,38 @@ public class TestController {
     public ResponseEntity<String> testIbm() throws Exception {
         String response = ibmService.runIbmScan("https://en.wikipedia.org/wiki/STAYC");
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    @GetMapping("/debug/env")
+    public String debugEnv() throws Exception {
+        StringBuilder sb = new StringBuilder();
+
+        // Print PATH
+        sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
+
+        // Try which node
+        try {
+            ProcessBuilder pb = new ProcessBuilder("which", "node");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String result = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
+            sb.append("which node: ").append(result).append("\n");
+        } catch (Exception e) {
+            sb.append("which node failed: ").append(e.getMessage()).append("\n");
+        }
+
+        // Try common node locations
+        String[] commonPaths = {
+                "/usr/bin/node",
+                "/usr/local/bin/node",
+                "/nix/var/nix/profiles/default/bin/node",
+                "/root/.nix-profile/bin/node"
+        };
+        for (String path : commonPaths) {
+            sb.append(path).append(" exists: ").append(Files.exists(Path.of(path))).append("\n");
+        }
+
+        return sb.toString();
     }
 }
