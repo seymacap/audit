@@ -87,21 +87,29 @@ public class TestController {
 
             ProcessBuilder pb = new ProcessBuilder(nodeExecutable, acheckerScript, "https://www.nederlandveilig.nl/");
             pb.directory(new File(System.getProperty("user.dir")));
-            pb.redirectErrorStream(true);
+            pb.redirectErrorStream(true); // merge stderr into stdout
 
-            String nodeBinDir = Path.of(nodeExecutable).getParent().toString();
-            pb.environment().put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
+            pb.environment().put("PATH", "/usr/bin:/usr/local/bin:/bin");
             pb.environment().put("NODE_NO_WARNINGS", "1");
+            pb.environment().put("PUPPETEER_EXECUTABLE_PATH", "/usr/bin/chromium-browser");
 
             Process p = pb.start();
             String output = new String(p.getInputStream().readAllBytes());
             int exit = p.waitFor();
 
-            sb.append("achecker exit code: ").append(exit).append("\n");
-            sb.append("achecker output (first 2000 chars):\n")
-                    .append(output, 0, Math.min(2000, output.length())).append("\n");
+            sb.append("exit: ").append(exit).append("\n");
+            sb.append("output:\n").append(output).append("\n");
+
+            // List what was written to accessibility-reports
+            Path reportDir = Path.of("/app/accessibility-reports");
+            if (Files.exists(reportDir)) {
+                sb.append("report files:\n");
+                Files.walk(reportDir).forEach(p2 -> sb.append(p2).append("\n"));
+            } else {
+                sb.append("accessibility-reports dir does not exist\n");
+            }
         } catch (Exception e) {
-            sb.append("achecker test failed: ").append(e.getMessage()).append("\n");
+            sb.append("failed: ").append(e.getMessage()).append("\n");
         }
 
         sb.append("puppeteer cache exists: ").append(Files.exists(Path.of("/root/.cache/puppeteer"))).append("\n");
