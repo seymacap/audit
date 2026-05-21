@@ -163,27 +163,38 @@ public class IBMService {
     }
 
     private String findAcheckerScript() throws Exception {
-        String npmBin;
+        String globalRoot;
+
         Path miseInstalls = Path.of("/mise/installs/node");
         if (Files.exists(miseInstalls)) {
-            npmBin = Files.list(miseInstalls)
+            String npmPath = Files.list(miseInstalls)
                     .filter(Files::isDirectory)
                     .max(Comparator.naturalOrder())
                     .map(p -> p.resolve("bin/npm").toString())
                     .filter(p -> Files.exists(Path.of(p)))
-                    .orElse(null);
+                    .orElseThrow(() -> new RuntimeException("No npm binary under /mise/installs/node"));
+
+            String nodeBinDir = Path.of(npmPath).getParent().toString();
+
+            ProcessBuilder pb = new ProcessBuilder(npmPath, "root", "-g");
+            pb.environment().put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
+        } else if (IS_WINDOWS) {
+            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
         } else {
-            npmBin = null;
+            ProcessBuilder pb = new ProcessBuilder("npm", "root", "-g");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            globalRoot = new String(p.getInputStream().readAllBytes()).trim();
+            p.waitFor();
         }
-
-        ProcessBuilder pb = IS_WINDOWS
-                ? new ProcessBuilder("cmd", "/c", "npm", "root", "-g")
-                : new ProcessBuilder(npmBin != null ? npmBin : "npm", "root", "-g");
-
-        pb.redirectErrorStream(true);
-        Process p = pb.start();
-        String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
-        p.waitFor();
 
         String sep = File.separator;
         String base = globalRoot + sep + "accessibility-checker" + sep;
