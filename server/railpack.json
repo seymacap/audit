@@ -2,9 +2,14 @@
   "packages": {
     "node": "22"
   },
-  "install": {
+  "build": {
     "cmds": [
-      "npm install -g accessibility-checker"
+      "npm install -g accessibility-checker",
+      "chmod +x mvnw",
+      "./mvnw -DoutputFile=target/mvn-dependency-list.log -B -DskipTests clean dependency:list install"
     ]
+  },
+  "deploy": {
+    "cmd": "java -jar target/server-0.0.1-SNAPSHOT.jar"
   }
 }
