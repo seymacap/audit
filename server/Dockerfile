@@ -19,7 +19,8 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Install accessibility-checker locally
 COPY package*.json ./
-RUN npm install accessibility-checker --ignore-scripts
+RUN npm install accessibility-checker --ignore-scripts \
+    snap install chromium
 
 # Copy built jar and config
 COPY --from=build /app/target/*.jar app.jar
