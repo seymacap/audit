@@ -101,11 +101,13 @@ public class IBMService {
         String acheckerScript = findAcheckerScript();
 
         ProcessBuilder builder = buildNodeProcess(nodeExecutable, acheckerScript, url);
-
         builder.directory(new File(System.getProperty("user.dir")));
         builder.redirectErrorStream(false);
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);
-        builder.environment().put("NODE_NO_WARNINGS", "1");
+
+        Map<String, String> env = builder.environment();
+        env.put("PATH", "/mise/shims:/mise/installs/java/21.0.2/bin:/usr/local/bin:/usr/bin:/bin");
+        env.put("NODE_NO_WARNINGS", "1");
 
         Process process = builder.start();
 
@@ -137,19 +139,12 @@ public class IBMService {
     }
 
     private String findNodeExecutable() throws Exception {
-        // Check mise shims first (Railway)
-        String[] knownPaths = {
-                "/mise/shims/node",
-                "/mise/installs/node/22/bin/node",
-                "/usr/local/bin/node",
-                "/usr/bin/node"
-        };
-
-        for (String path : knownPaths) {
-            if (Files.exists(Path.of(path))) return path;
+        // use mise shim directly
+        if (Files.exists(Path.of("/mise/shims/node"))) {
+            return "/mise/shims/node";
         }
 
-        // Fall back to which/where
+        // Fall back to which/where for local/Windows
         ProcessBuilder pb = IS_WINDOWS
                 ? new ProcessBuilder("cmd", "/c", "where", "node")
                 : new ProcessBuilder("which", "node");
@@ -161,15 +156,17 @@ public class IBMService {
 
         if (!path.isEmpty()) return path;
 
-        throw new RuntimeException("Could not find node executable. PATH: " + System.getenv("PATH"));
+        throw new RuntimeException("Could not find node. PATH: " + System.getenv("PATH"));
     }
 
     private String findAcheckerScript() throws Exception {
         ProcessBuilder pb = IS_WINDOWS
                 ? new ProcessBuilder("cmd", "/c", "npm", "root", "-g")
-                : new ProcessBuilder("npm", "root", "-g");
+                : new ProcessBuilder("/mise/shims/npm", "root", "-g");
 
         pb.redirectErrorStream(true);
+        
+        pb.environment().put("PATH", "/mise/shims:/usr/local/bin:/usr/bin:/bin");
         Process p = pb.start();
         String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
         p.waitFor();
