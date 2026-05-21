@@ -42,7 +42,7 @@ public class IBMService {
             Map.entry("4.1.2", List.of("aria_role_valid", "aria_attribute_valid", "aria_accessiblename_exists",
                     "element_id_unique", "element_tabbable_role_valid"))
 
-            //TODO add more values from ibm website
+            // TODO add more values from ibm website
     );
 
     public String getIssuesPerCriteria(String rawJson, String criteriaId) throws Exception {
