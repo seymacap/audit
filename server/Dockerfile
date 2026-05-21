@@ -13,14 +13,15 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
+RUN snap install chromium
+
 ENV CHROMEDRIVER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Install accessibility-checker locally
 COPY package*.json ./
-RUN npm install accessibility-checker --ignore-scripts \
-    snap install chromium
+RUN npm install accessibility-checker --ignore-scripts
 
 # Copy built jar and config
 COPY --from=build /app/target/*.jar app.jar
