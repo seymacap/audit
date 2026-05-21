@@ -4,26 +4,24 @@ COPY pom.xml .
 COPY src ./src
 RUN mvn -DoutputFile=target/mvn-dependency-list.log -B -DskipTests clean dependency:list install
 
-FROM eclipse-temurin:21-jre
+FROM debian:bookworm-slim
 WORKDIR /app
 
-# Install Node.js, Chromium and dependencies
 RUN apt-get update && apt-get install -y \
-    nodejs npm chromium \
+    openjdk-17-jre-headless \
+    nodejs npm \
+    chromium \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-RUN snap install chromium
-
-ENV CHROMEDRIVER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV CHROMEDRIVER_SKIP_DOWNLOAD=true
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
-# Install accessibility-checker locally
 COPY package*.json ./
 RUN npm install accessibility-checker --ignore-scripts
 
-# Copy built jar and config
 COPY --from=build /app/target/*.jar app.jar
 COPY aceconfig.js .
 

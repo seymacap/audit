@@ -4,7 +4,7 @@ module.exports = {
     reportLevels: ["violation", "potentialviolation", "recommendation", "potentialrecommendation", "manual"],
     failLevels: ["violation"],
     puppeteerOptions: {
-        executablePath: "/usr/bin/chromium-browser",
+        executablePath: "/usr/bin/chromium",
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     }
 };
