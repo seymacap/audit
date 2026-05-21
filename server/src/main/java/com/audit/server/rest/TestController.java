@@ -55,7 +55,7 @@ public class TestController {
 
         // Print PATH
         sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
-        
+
         try {
             ProcessBuilder pb = new ProcessBuilder("find", "/mise/installs", "-name", "node", "-type", "f");
             pb.redirectErrorStream(true);

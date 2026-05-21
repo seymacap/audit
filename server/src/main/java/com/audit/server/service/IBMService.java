@@ -106,7 +106,8 @@ public class IBMService {
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);
 
         Map<String, String> env = builder.environment();
-        env.put("PATH", "/mise/shims:/mise/installs/java/21.0.2/bin:/usr/local/bin:/usr/bin:/bin");
+        String nodeBinDir = Path.of(nodeExecutable).getParent().toString();
+        env.put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
         env.put("NODE_NO_WARNINGS", "1");
 
         Process process = builder.start();
@@ -139,34 +140,47 @@ public class IBMService {
     }
 
     private String findNodeExecutable() throws Exception {
-        // use mise shim directly
-        if (Files.exists(Path.of("/mise/shims/node"))) {
-            return "/mise/shims/node";
+        Path miseInstalls = Path.of("/mise/installs/node");
+        if (Files.exists(miseInstalls)) {
+            return Files.list(miseInstalls)
+                    .filter(Files::isDirectory)
+                    .max(Comparator.naturalOrder())
+                    .map(p -> p.resolve("bin/node").toString())
+                    .filter(p -> Files.exists(Path.of(p)))
+                    .orElseThrow(() -> new RuntimeException("No node binary under /mise/installs/node"));
         }
 
-        // Fall back to which/where for local/Windows
-        ProcessBuilder pb = IS_WINDOWS
-                ? new ProcessBuilder("cmd", "/c", "where", "node")
-                : new ProcessBuilder("which", "node");
-
-        pb.redirectErrorStream(true);
-        Process p = pb.start();
-        String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
-        p.waitFor();
-
-        if (!path.isEmpty()) return path;
+        if (IS_WINDOWS) {
+            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "where", "node");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
+            p.waitFor();
+            if (!path.isEmpty()) return path;
+        }
 
         throw new RuntimeException("Could not find node. PATH: " + System.getenv("PATH"));
     }
 
     private String findAcheckerScript() throws Exception {
+        String npmBin;
+        Path miseInstalls = Path.of("/mise/installs/node");
+        if (Files.exists(miseInstalls)) {
+            npmBin = Files.list(miseInstalls)
+                    .filter(Files::isDirectory)
+                    .max(Comparator.naturalOrder())
+                    .map(p -> p.resolve("bin/npm").toString())
+                    .filter(p -> Files.exists(Path.of(p)))
+                    .orElse(null);
+        } else {
+            npmBin = null;
+        }
+
         ProcessBuilder pb = IS_WINDOWS
                 ? new ProcessBuilder("cmd", "/c", "npm", "root", "-g")
-                : new ProcessBuilder("/mise/shims/npm", "root", "-g");
+                : new ProcessBuilder(npmBin != null ? npmBin : "npm", "root", "-g");
 
         pb.redirectErrorStream(true);
-
-        pb.environment().put("PATH", "/mise/shims:/usr/local/bin:/usr/bin:/bin");
         Process p = pb.start();
         String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
         p.waitFor();
