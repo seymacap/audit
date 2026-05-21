@@ -13,13 +13,13 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
+ENV CHROMEDRIVER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 # Install accessibility-checker locally
 COPY package*.json ./
-RUN npm install accessibility-checker
-
-# Set Chromium path for Puppeteer
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+RUN npm install accessibility-checker --ignore-scripts
 
 # Copy built jar and config
 COPY --from=build /app/target/*.jar app.jar
