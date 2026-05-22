@@ -10,13 +10,13 @@ FROM eclipse-temurin:21-jre-jammy
 
 RUN apt-get update && apt-get install -y curl \
  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
- && apt-get install -y nodejs chromium-browser \
+ && apt-get install -y nodejs chromium \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN npm install -g accessibility-checker
 
