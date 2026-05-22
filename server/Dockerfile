@@ -18,7 +18,6 @@ WORKDIR /app
 RUN npm install -g accessibility-checker
 
 COPY --from=build /app/target/*.jar app.jar
-COPY .achecker.yml .achecker.yml
 
 ENV SERVER_PORT=${PORT:-8080}
 
