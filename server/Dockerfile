@@ -6,7 +6,7 @@ RUN mvn dependency:go-offline -q
 COPY src ./src
 RUN mvn package -DskipTests -q
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:21-jre-focal
 
 RUN apt-get update && apt-get install -y curl \
     chromium-browser \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y curl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
- 
+
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
