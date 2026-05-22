@@ -1,13 +1,18 @@
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+WORKDIR /build
+
+COPY pom.xml .
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
 FROM eclipse-temurin:17-jdk-jammy
 
 RUN apt-get update && apt-get install -y \
     chromium-browser \
-    chromium-chromedriver \
     nodejs \
     npm \
-    wget \
-    curl \
-    unzip \
     fonts-liberation \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -27,13 +32,10 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+RUN npm install -g @ibm-accessibility-checker/cli
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+COPY --from=builder /build/target/*.jar app.jar
 
-RUN npm install -g @ibm-accessibility-checker/cli
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]
