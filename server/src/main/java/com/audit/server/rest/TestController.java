@@ -50,75 +50,75 @@ public class TestController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    @GetMapping("/debug/env")
-    public String debugEnv() throws Exception {
-        StringBuilder sb = new StringBuilder();
-
-        // Print PATH
-        sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
-
-        try {
-            ProcessBuilder pb = new ProcessBuilder("find",
-                    "/mise/installs/node/22.22.2/lib/node_modules/accessibility-checker",
-                    "-name", "*.js", "-maxdepth", "3");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            String result = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
-            sb.append("achecker files:\n").append(result).append("\n");
-        } catch (Exception e) {
-            sb.append("find achecker failed: ").append(e.getMessage()).append("\n");
-        }
-
-        // Try common node locations
-        String[] commonPaths = {
-                "/usr/bin/node",
-                "/usr/local/bin/node",
-                "/nix/var/nix/profiles/default/bin/node",
-                "/root/.nix-profile/bin/node"
-        };
-        for (String path : commonPaths) {
-            sb.append(path).append(" exists: ").append(Files.exists(Path.of(path))).append("\n");
-        }
-
-        try {
-            String nodeExecutable = ibmService.findNodeExecutable();
-            String acheckerScript = ibmService.findAcheckerScript();
-
-            ProcessBuilder pb = new ProcessBuilder(nodeExecutable, acheckerScript, "https://www.nederlandveilig.nl/");
-            pb.directory(new File(System.getProperty("user.dir")));
-            pb.redirectErrorStream(true); // merge stderr into stdout
-
-            pb.environment().put("PATH", "/usr/bin:/usr/local/bin:/bin");
-            pb.environment().put("NODE_NO_WARNINGS", "1");
-            pb.environment().put("PUPPETEER_EXECUTABLE_PATH", "/usr/bin/chromium-browser");
-
-            Process p = pb.start();
-            String output = new String(p.getInputStream().readAllBytes());
-            int exit = p.waitFor();
-
-            sb.append("exit: ").append(exit).append("\n");
-            sb.append("output:\n").append(output).append("\n");
-
-            // List what was written to accessibility-reports
-            Path reportDir = Path.of("/app/accessibility-reports");
-            if (Files.exists(reportDir)) {
-                sb.append("report files:\n");
-                Files.walk(reportDir).forEach(p2 -> sb.append(p2).append("\n"));
-            } else {
-                sb.append("accessibility-reports dir does not exist\n");
-            }
-        } catch (Exception e) {
-            sb.append("failed: ").append(e.getMessage()).append("\n");
-        }
-
-        sb.append("puppeteer cache exists: ").append(Files.exists(Path.of("/root/.cache/puppeteer"))).append("\n");
-        sb.append("working dir: ").append(System.getProperty("user.dir")).append("\n");
-        sb.append("working dir writable: ").append(new File(System.getProperty("user.dir")).canWrite()).append("\n");
-        sb.append("aceconfig.js exists: ").append(Files.exists(Path.of(System.getProperty("user.dir") + "/aceconfig.js"))).append("\n");
-        sb.append("chromium exists: ").append(Files.exists(Path.of("/usr/bin/chromium"))).append("\n");
-        sb.append("chromium-browser exists: ").append(Files.exists(Path.of("/usr/bin/chromium-browser"))).append("\n");
-
-        return sb.toString();
-    }
+//    @GetMapping("/debug/env")
+//    public String debugEnv() throws Exception {
+//        StringBuilder sb = new StringBuilder();
+//
+//        // Print PATH
+//        sb.append("PATH: ").append(System.getenv("PATH")).append("\n\n");
+//
+//        try {
+//            ProcessBuilder pb = new ProcessBuilder("find",
+//                    "/mise/installs/node/22.22.2/lib/node_modules/accessibility-checker",
+//                    "-name", "*.js", "-maxdepth", "3");
+//            pb.redirectErrorStream(true);
+//            Process p = pb.start();
+//            String result = new String(p.getInputStream().readAllBytes()).trim();
+//            p.waitFor();
+//            sb.append("achecker files:\n").append(result).append("\n");
+//        } catch (Exception e) {
+//            sb.append("find achecker failed: ").append(e.getMessage()).append("\n");
+//        }
+//
+//        // Try common node locations
+//        String[] commonPaths = {
+//                "/usr/bin/node",
+//                "/usr/local/bin/node",
+//                "/nix/var/nix/profiles/default/bin/node",
+//                "/root/.nix-profile/bin/node"
+//        };
+//        for (String path : commonPaths) {
+//            sb.append(path).append(" exists: ").append(Files.exists(Path.of(path))).append("\n");
+//        }
+//
+//        try {
+//            String nodeExecutable = ibmService.findNodeExecutable();
+//            String acheckerScript = ibmService.findAcheckerScript();
+//
+//            ProcessBuilder pb = new ProcessBuilder(nodeExecutable, acheckerScript, "https://www.nederlandveilig.nl/");
+//            pb.directory(new File(System.getProperty("user.dir")));
+//            pb.redirectErrorStream(true); // merge stderr into stdout
+//
+//            pb.environment().put("PATH", "/usr/bin:/usr/local/bin:/bin");
+//            pb.environment().put("NODE_NO_WARNINGS", "1");
+//            pb.environment().put("PUPPETEER_EXECUTABLE_PATH", "/usr/bin/chromium-browser");
+//
+//            Process p = pb.start();
+//            String output = new String(p.getInputStream().readAllBytes());
+//            int exit = p.waitFor();
+//
+//            sb.append("exit: ").append(exit).append("\n");
+//            sb.append("output:\n").append(output).append("\n");
+//
+//            // List what was written to accessibility-reports
+//            Path reportDir = Path.of("/app/accessibility-reports");
+//            if (Files.exists(reportDir)) {
+//                sb.append("report files:\n");
+//                Files.walk(reportDir).forEach(p2 -> sb.append(p2).append("\n"));
+//            } else {
+//                sb.append("accessibility-reports dir does not exist\n");
+//            }
+//        } catch (Exception e) {
+//            sb.append("failed: ").append(e.getMessage()).append("\n");
+//        }
+//
+//        sb.append("puppeteer cache exists: ").append(Files.exists(Path.of("/root/.cache/puppeteer"))).append("\n");
+//        sb.append("working dir: ").append(System.getProperty("user.dir")).append("\n");
+//        sb.append("working dir writable: ").append(new File(System.getProperty("user.dir")).canWrite()).append("\n");
+//        sb.append("aceconfig.js exists: ").append(Files.exists(Path.of(System.getProperty("user.dir") + "/aceconfig.js"))).append("\n");
+//        sb.append("chromium exists: ").append(Files.exists(Path.of("/usr/bin/chromium"))).append("\n");
+//        sb.append("chromium-browser exists: ").append(Files.exists(Path.of("/usr/bin/chromium-browser"))).append("\n");
+//
+//        return sb.toString();
+//    }
 }

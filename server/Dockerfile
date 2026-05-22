@@ -1,28 +1,39 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-RUN mvn -DoutputFile=target/mvn-dependency-list.log -B -DskipTests clean dependency:list install
-
-FROM debian:bookworm-slim
-WORKDIR /app
+FROM eclipse-temurin:17-jdk-jammy
 
 RUN apt-get update && apt-get install -y \
-    openjdk-17-jre-headless \
-    nodejs npm \
-    chromium \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+    chromium-browser \
+    chromium-chromedriver \
+    nodejs \
+    npm \
+    wget \
+    curl \
+    unzip \
+    fonts-liberation \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxrandr2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnss3 \
+    libasound2 \
+    libx11-xcb1 \
+    libxdamage1 \
+    libxfixes3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV CHROMEDRIVER_SKIP_DOWNLOAD=true
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
-COPY package*.json ./
-RUN npm install accessibility-checker --ignore-scripts
+WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
-COPY aceconfig.js .
+COPY target/*.jar app.jar
+
+RUN npm install -g @ibm-accessibility-checker/cli
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

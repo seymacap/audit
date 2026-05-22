@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class IBMService {
@@ -87,41 +88,56 @@ public class IBMService {
         return sb.toString();
     }
 
+
     public String runIbmScan(String url) throws Exception {
-        Path outputDir = Path.of("accessibility-reports").toAbsolutePath();
+        Path outputDir = Path.of("accessibility-reports", UUID.randomUUID().toString());
         Files.createDirectories(outputDir);
 
-        try (var stream = Files.walk(outputDir)) {
-            stream.sorted(Comparator.reverseOrder())
-                    .filter(p -> !p.equals(outputDir))
-                    .forEach(p -> p.toFile().delete());
-        }
+        ProcessBuilder builder = new ProcessBuilder(
+                "accessibility-checker",
+                url,
+                "--output",
+                outputDir.toString(),
+                "--headless",
+                "--chromeOptions=--no-sandbox --disable-dev-shm-usage"
+        );
 
-        String nodeExecutable = findNodeExecutable();
-        String acheckerScript = findAcheckerScript();
-
-        ProcessBuilder builder = buildNodeProcess(nodeExecutable, acheckerScript, url);
         builder.directory(new File(System.getProperty("user.dir")));
-        builder.redirectErrorStream(false);
-        builder.redirectError(ProcessBuilder.Redirect.DISCARD);
+        builder.redirectErrorStream(true); // merge stdout + stderr
 
         Map<String, String> env = builder.environment();
-        String nodeBinDir = Path.of(nodeExecutable).getParent().toString();
-        env.put("PATH", nodeBinDir + ":/usr/local/bin:/usr/bin:/bin");
         env.put("NODE_NO_WARNINGS", "1");
 
         Process process = builder.start();
 
-        Thread stdoutThread = new Thread(() -> {
+        StringBuilder outputLog = new StringBuilder();
+        Thread logThread = new Thread(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream()))) {
-                while (reader.readLine() != null) {}
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    outputLog.append(line).append("\n");
+                }
             } catch (IOException ignored) {}
         });
 
-        stdoutThread.start();
-        stdoutThread.join();
-        process.waitFor();
+        logThread.start();
+
+        // Timeout protection (important for cloud)
+        boolean finished = process.waitFor(2, TimeUnit.MINUTES);
+        logThread.join();
+
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException("Accessibility scan timed out");
+        }
+
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            throw new RuntimeException(
+                    "Accessibility checker failed (exit " + exitCode + ")\n" + outputLog
+            );
+        }
 
         try (var stream = Files.walk(outputDir)) {
             return stream
@@ -132,96 +148,99 @@ public class IBMService {
                         try {
                             System.out.println("Reading report from: " + p);
                             return Files.readString(p);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
-                        catch (IOException e) { throw new RuntimeException(e); }
                     })
-                    .orElseThrow(() -> new RuntimeException("No JSON report generated for: " + url));
+                    .orElseThrow(() ->
+                            new RuntimeException("No JSON report generated for: " + url));
         }
     }
 
-    public String findNodeExecutable() throws Exception {
-        String[] knownPaths = {
-                "/usr/bin/node",           // Dockerfile apt-get install nodejs
-                "/usr/local/bin/node",
-                "/mise/installs/node/22.22.2/bin/node"
-        };
 
-        for (String path : knownPaths) {
-            if (Files.exists(Path.of(path))) return path;
-        }
-
-        Path miseInstalls = Path.of("/mise/installs/node");
-        if (Files.exists(miseInstalls)) {
-            Optional<Path> latest = Files.list(miseInstalls)
-                    .filter(Files::isDirectory)
-                    .max(Comparator.naturalOrder());
-            if (latest.isPresent()) {
-                Path nodeBin = latest.get().resolve("bin/node");
-                if (Files.exists(nodeBin)) return nodeBin.toString();
-            }
-        }
-
-        if (IS_WINDOWS) {
-            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "where", "node");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
-            p.waitFor();
-            if (!path.isEmpty()) return path;
-        }
-
-        throw new RuntimeException("Could not find node. PATH: " + System.getenv("PATH"));
-    }
-
-    public String findAcheckerScript() throws Exception {
-        String sep = File.separator;
-
-        String localBase = System.getProperty("user.dir") + sep + "node_modules" + sep + "accessibility-checker" + sep;
-
-        String miseBase = null;
-        Path miseInstalls = Path.of("/mise/installs/node");
-        if (Files.exists(miseInstalls)) {
-            Optional<Path> latest = Files.list(miseInstalls)
-                    .filter(Files::isDirectory)
-                    .max(Comparator.naturalOrder());
-            if (latest.isPresent()) {
-                miseBase = latest.get() + sep + "lib" + sep + "node_modules" + sep + "accessibility-checker" + sep;
-            }
-        }
-
-        String[] suffixes = {
-                "src" + sep + "lib" + sep + "ace.js",
-                "src" + sep + "lib" + sep + "index.js",
-                "bin" + sep + "achecker.js",
-                "lib" + sep + "ace.js",
-                "index.js"
-        };
-
-        for (String suffix : suffixes) {
-            Path candidate = Path.of(localBase + suffix);
-            if (Files.exists(candidate)) return candidate.toString();
-        }
-
-        if (miseBase != null) {
-            for (String suffix : suffixes) {
-                Path candidate = Path.of(miseBase + suffix);
-                if (Files.exists(candidate)) return candidate.toString();
-            }
-        }
-
-        if (IS_WINDOWS) {
-            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
-            p.waitFor();
-            String winBase = globalRoot + "\\accessibility-checker\\";
-            for (String suffix : new String[]{"src\\lib\\ace.js", "src\\lib\\index.js",
-                    "bin\\achecker.js", "lib\\ace.js", "index.js"}) {
-                if (Files.exists(Path.of(winBase + suffix))) return winBase + suffix;
-            }
-        }
-
-        throw new RuntimeException("Cannot find achecker script. localBase=" + localBase);
-    }
+//    public String findNodeExecutable() throws Exception {
+//        String[] knownPaths = {
+//                "/usr/bin/node",           // Dockerfile apt-get install nodejs
+//                "/usr/local/bin/node",
+//                "/mise/installs/node/22.22.2/bin/node"
+//        };
+//
+//        for (String path : knownPaths) {
+//            if (Files.exists(Path.of(path))) return path;
+//        }
+//
+//        Path miseInstalls = Path.of("/mise/installs/node");
+//        if (Files.exists(miseInstalls)) {
+//            Optional<Path> latest = Files.list(miseInstalls)
+//                    .filter(Files::isDirectory)
+//                    .max(Comparator.naturalOrder());
+//            if (latest.isPresent()) {
+//                Path nodeBin = latest.get().resolve("bin/node");
+//                if (Files.exists(nodeBin)) return nodeBin.toString();
+//            }
+//        }
+//
+//        if (IS_WINDOWS) {
+//            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "where", "node");
+//            pb.redirectErrorStream(true);
+//            Process p = pb.start();
+//            String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
+//            p.waitFor();
+//            if (!path.isEmpty()) return path;
+//        }
+//
+//        throw new RuntimeException("Could not find node. PATH: " + System.getenv("PATH"));
+//    }
+//
+//    public String findAcheckerScript() throws Exception {
+//        String sep = File.separator;
+//
+//        String localBase = System.getProperty("user.dir") + sep + "node_modules" + sep + "accessibility-checker" + sep;
+//
+//        String miseBase = null;
+//        Path miseInstalls = Path.of("/mise/installs/node");
+//        if (Files.exists(miseInstalls)) {
+//            Optional<Path> latest = Files.list(miseInstalls)
+//                    .filter(Files::isDirectory)
+//                    .max(Comparator.naturalOrder());
+//            if (latest.isPresent()) {
+//                miseBase = latest.get() + sep + "lib" + sep + "node_modules" + sep + "accessibility-checker" + sep;
+//            }
+//        }
+//
+//        String[] suffixes = {
+//                "src" + sep + "lib" + sep + "ace.js",
+//                "src" + sep + "lib" + sep + "index.js",
+//                "bin" + sep + "achecker.js",
+//                "lib" + sep + "ace.js",
+//                "index.js"
+//        };
+//
+//        for (String suffix : suffixes) {
+//            Path candidate = Path.of(localBase + suffix);
+//            if (Files.exists(candidate)) return candidate.toString();
+//        }
+//
+//        if (miseBase != null) {
+//            for (String suffix : suffixes) {
+//                Path candidate = Path.of(miseBase + suffix);
+//                if (Files.exists(candidate)) return candidate.toString();
+//            }
+//        }
+//
+//        if (IS_WINDOWS) {
+//            ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
+//            pb.redirectErrorStream(true);
+//            Process p = pb.start();
+//            String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
+//            p.waitFor();
+//            String winBase = globalRoot + "\\accessibility-checker\\";
+//            for (String suffix : new String[]{"src\\lib\\ace.js", "src\\lib\\index.js",
+//                    "bin\\achecker.js", "lib\\ace.js", "index.js"}) {
+//                if (Files.exists(Path.of(winBase + suffix))) return winBase + suffix;
+//            }
+//        }
+//
+//        throw new RuntimeException("Cannot find achecker script. localBase=" + localBase);
+//    }
 }
