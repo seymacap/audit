@@ -41,8 +41,6 @@ public class IBMService {
             Map.entry("3.3.2", List.of("input_label_visible", "input_checkboxes_grouped", "label_content_exists")),
             Map.entry("4.1.2", List.of("aria_role_valid", "aria_attribute_valid", "aria_accessiblename_exists",
                     "element_id_unique", "element_tabbable_role_valid"))
-
-            //TODO add more values from ibm website
     );
 
     public String getIssuesPerCriteria(String rawJson, String criteriaId) throws Exception {
@@ -89,10 +87,7 @@ public class IBMService {
         String nodeExecutable = findNodeExecutable();
         String acheckerScript = findAcheckerScript();
 
-        ProcessBuilder builder = new ProcessBuilder(
-                "cmd", "/c", nodeExecutable, acheckerScript, url
-        );
-
+        ProcessBuilder builder = new ProcessBuilder(nodeExecutable, acheckerScript, url);
         builder.directory(new File(System.getProperty("user.dir")));
         builder.redirectErrorStream(false);
         builder.redirectError(ProcessBuilder.Redirect.DISCARD);
@@ -120,25 +115,19 @@ public class IBMService {
                         try {
                             System.out.println("Reading report from: " + p);
                             return Files.readString(p);
-                        }
-                        catch (IOException e) { throw new RuntimeException(e); }
+                        } catch (IOException e) { throw new RuntimeException(e); }
                     })
                     .orElseThrow(() -> new RuntimeException("No JSON report generated for: " + url));
         }
     }
 
-    private void appendSection(StringBuilder sb, String title, List<String> items, int max) {
-        if (items.isEmpty()) return;
-        sb.append(title).append(":\n");
-        items.stream().limit(max).forEach(item -> sb.append(item).append("\n"));
-        if (items.size() > max) {
-            sb.append("  ...and ").append(items.size() - max).append(" more.\n");
-        }
-        sb.append("\n");
-    }
-
     private String findNodeExecutable() throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "where", "node");
+        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+
+        ProcessBuilder pb = isWindows
+                ? new ProcessBuilder("cmd", "/c", "where", "node")
+                : new ProcessBuilder("which", "node");
+
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String path = new String(p.getInputStream().readAllBytes()).trim().split("\n")[0].trim();
@@ -148,18 +137,25 @@ public class IBMService {
     }
 
     private String findAcheckerScript() throws Exception {
-        ProcessBuilder pb = new ProcessBuilder("cmd", "/c", "npm", "root", "-g");
+        boolean isWindows = System.getProperty("os.name", "").toLowerCase().contains("win");
+
+        ProcessBuilder pb = isWindows
+                ? new ProcessBuilder("cmd", "/c", "npm", "root", "-g")
+                : new ProcessBuilder("npm", "root", "-g");
+
         pb.redirectErrorStream(true);
         Process p = pb.start();
         String globalRoot = new String(p.getInputStream().readAllBytes()).trim();
         p.waitFor();
 
-        String base = globalRoot + "\\accessibility-checker\\";
+        String sep = isWindows ? "\\" : "/";
+        String base = globalRoot + sep + "accessibility-checker" + sep;
+
         String[] candidates = {
-                base + "src\\lib\\ace.js",
-                base + "src\\lib\\index.js",
-                base + "bin\\achecker.js",
-                base + "lib\\ace.js",
+                base + "src" + sep + "lib" + sep + "ace.js",
+                base + "src" + sep + "lib" + sep + "index.js",
+                base + "bin" + sep + "achecker.js",
+                base + "lib" + sep + "ace.js",
                 base + "index.js"
         };
 
