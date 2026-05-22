@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y \
         chromium-browser \
+        chromium-chromedriver \
         nodejs \
         fonts-liberation \
         libatk-bridge2.0-0 \
