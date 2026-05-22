@@ -15,6 +15,7 @@ function AuditForm({children, object, open, close}) {
     const [failed, setFailed] = useState(false);
 
     const [score, setScore] = useState("");
+    const [thought, setThought] = useState("");
 
     const [answers, setAnswers] = useState([]);
 
@@ -106,6 +107,7 @@ function AuditForm({children, object, open, close}) {
 
         if (index !== -1 && index < criteria.length - 1) {
             setActiveCriteria(criteria[index + 1]);
+            setThought("");
         }
     }
 
@@ -114,6 +116,7 @@ function AuditForm({children, object, open, close}) {
 
         if (index > 0 && index < criteria.length - 1) {
             setActiveCriteria(criteria[index - 1]);
+            setThought("");
         } else {
             close();
         }
@@ -140,6 +143,7 @@ function AuditForm({children, object, open, close}) {
             );
             setScore(res.data.overall_violation);
             setAnswers(dataMapper(res.data.violated_elements_and_reasons));
+            setThought(res.data.thought_process);
         } catch (err) {
             if (err.status === 500){
                 setFailed(true);
@@ -156,6 +160,7 @@ function AuditForm({children, object, open, close}) {
                 .then(res => {
                     setScore(res.data.overall_violation);
                     setAnswers(dataMapper(res.data.violated_elements_and_reasons));
+                    setThought(res.data.thought_process);
                 });
         } catch (err) {
             if (err.status === 500){
@@ -315,6 +320,18 @@ function AuditForm({children, object, open, close}) {
                                         </div>
                                     )}
                                 </div>
+                                {thought && (
+                                    <div className="ai-box">
+                                        <div className="box-item">
+                                            <div className="box-header">
+                                                Thought process
+                                            </div>
+                                            <div>
+                                                {thought}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {answers.map((a, i) => (
                                     <div className="styling-form">

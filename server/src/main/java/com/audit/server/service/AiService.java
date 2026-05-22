@@ -51,16 +51,19 @@ public class AiService {
             "            \"comment\": \"\" (You can leave this empty)" +
             "        }\n" +
             "    ]\n" +
+            "    \"thought_process\": \"Briefly describe your thought process" +
             "}" +
             "If there are no violations, the response should be: \n" +
             "{\n" +
             "    \"overall_violation\": \"PASSED\",\n" +
-            "    \"violated_elements_and_reasons\": [}\n" +
+            "    \"violated_elements_and_reasons\": []\n" +
+            "    \"thought_process\": \"Briefly describe your thought process" +
             "}" +
             "\n If no element is provided you can return (elements can not be forgotten): " +
             "{\n" +
             "    \"overall_violation\": \"NA\",\n" +
-            "    \"violated_elements_and_reasons\": [}\n" +
+            "    \"violated_elements_and_reasons\": []\n" +
+            "    \"thought_process\": \"Briefly describe your thought process" +
             "}\n";
 
     public AiService(SuccessCriteriaRepository criteriaRepo, AuditRepository auditRepo, JSoupService jSoupService) {
@@ -96,15 +99,14 @@ public class AiService {
 
     /**
      * Compresses and resizes an image to keep base64-encoded size well under
-     * Groq's 4 MB request limit. Scales down to a max dimension of 1280 px
+     * request limit. Scales down to a max dimension of 1280 px
      * and re-encodes as JPEG at 75% quality.
      */
     private byte[] compressImage(byte[] imageBytes) {
         try {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
-            if (img == null) return imageBytes; // unrecognised format, pass through
+            if (img == null) return imageBytes;
 
-            // Scale down if either dimension exceeds 1280 px
             int maxDim = 1280;
             if (img.getWidth() > maxDim || img.getHeight() > maxDim) {
                 double scale = Math.min((double) maxDim / img.getWidth(),
@@ -131,7 +133,6 @@ public class AiService {
             writer.dispose();
             return out.toByteArray();
         } catch (Exception e) {
-            // If anything goes wrong just return the original bytes
             return imageBytes;
         }
     }
@@ -450,25 +451,5 @@ public class AiService {
                         formatMessage +
                         " Remember no backticks and only respond with the given format.",
                 images);
-    }
-
-    private String detectMimeType(byte[] bytes) {
-        if (bytes.length >= 3
-                && bytes[0] == (byte) 0xFF
-                && bytes[1] == (byte) 0xD8
-                && bytes[2] == (byte) 0xFF) {
-            return "image/jpeg";
-        } else if (bytes.length >= 4
-                && bytes[0] == (byte) 0x89
-                && bytes[1] == 0x50
-                && bytes[2] == 0x4E
-                && bytes[3] == 0x47) {
-            return "image/png";
-        } else if (bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F') {
-            return "image/gif";
-        } else if (bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F') {
-            return "image/webp";
-        }
-        return "image/jpeg";
     }
 }
