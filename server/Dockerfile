@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @ibm-accessibility-checker/cli
+RUN npm install -g accessibility-checker
 
 WORKDIR /app
 
