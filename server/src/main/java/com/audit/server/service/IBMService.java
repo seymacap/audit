@@ -6,7 +6,6 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
@@ -131,10 +130,9 @@ public class IBMService {
         System.out.println("[IBM] outputDir: " + OUTPUT_DIR);
         System.out.println("[IBM] config:    " + ACHECKER_CFG);
 
-        ProcessBuilder builder = new ProcessBuilder(nodeExecutable, acheckerScript, url);
+        ProcessBuilder builder = new ProcessBuilder(nodeExecutable, acheckerScript, "--config", ACHECKER_CFG.toString(), url);
         builder.directory(TMP_DIR.toFile());
         builder.redirectErrorStream(false);
-        builder.redirectError(ProcessBuilder.Redirect.DISCARD);
         builder.environment().put("NODE_NO_WARNINGS", "1");
 
         Process process = builder.start();

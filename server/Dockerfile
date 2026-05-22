@@ -26,6 +26,7 @@ RUN apt-get update && apt-get install -y curl \
     libpangocairo-1.0-0 \
     libcairo2 \
     libgtk-3-0 \
+    binutils \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -33,6 +34,10 @@ RUN apt-get update && apt-get install -y curl \
 WORKDIR /app
 
 RUN npm install -g accessibility-checker
+
+RUN CHROMIUM=$(find /usr/lib/node_modules/accessibility-checker -name 'chrome' -o -name 'chromium' 2>/dev/null | head -1) \
+    && echo "=== Chromium binary: $CHROMIUM ===" \
+    && if [ -n "$CHROMIUM" ]; then ldd "$CHROMIUM" | grep "not found" || echo "All libs found"; else echo "No chromium binary found"; fi
 
 COPY --from=build /app/target/*.jar app.jar
 
